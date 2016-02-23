@@ -258,14 +258,21 @@ public class HttpRequest {
   private static final String CRLF = "\r\n";
 
   private static final String[] EMPTY_STRINGS = new String[0];
-  
+
   private static SSLSocketFactory PINNED_FACTORY;
 
   private static SSLSocketFactory TRUSTED_FACTORY;
-  
+
   private static ArrayList<Certificate> PINNED_CERTS;
 
   private static HostnameVerifier TRUSTED_VERIFIER;
+
+  private static int DEBUG_CODE;
+
+  private static HostnameVerifier TOFU_VERIFIER;
+
+  private static Map<String, Certificate> TOFU_CERTS;
+
 
   private static String getValidCharset(final String charset) {
     if (charset != null && charset.length() > 0)
@@ -273,7 +280,7 @@ public class HttpRequest {
     else
       return CHARSET_UTF8;
   }
-  
+
   private static SSLSocketFactory getPinnedFactory()
       throws HttpRequestException {
     if (PINNED_FACTORY != null) {
@@ -302,6 +309,7 @@ public class HttpRequest {
         }
       } };
       try {
+        DEBUG_CODE = 42;
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, trustAllCerts, new SecureRandom());
         TRUSTED_FACTORY = context.getSocketFactory();
@@ -326,6 +334,36 @@ public class HttpRequest {
       };
 
     return TRUSTED_VERIFIER;
+  }
+
+  private static HostnameVerifier getTofuVerifier() {
+    if (TOFU_VERIFIER == null)
+      TOFU_VERIFIER = new HostnameVerifier() {
+
+        public boolean verify(String hostname, SSLSession session) {
+          try {
+            Certificate[] peerCertificates = session.getPeerCertificates();
+            Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
+            if (TOFU_CERTS.containsKey(hostname)) {
+              if (peerRoot.equals(TOFU_CERTS.get(hostname))) {
+                DEBUG_CODE = 1001;
+              } else {
+                DEBUG_CODE = 1002;
+              }
+              return peerRoot.equals(TOFU_CERTS.get(hostname));
+            }
+            //trust on first use:
+            TOFU_CERTS.put(hostname, peerRoot);
+            DEBUG_CODE = 1003;
+            return true;
+          } catch(Exception e) {
+            DEBUG_CODE = 1004;
+            return false;
+          }
+        }
+      };
+
+    return TOFU_VERIFIER;
   }
 
   private static StringBuilder addPathSeparator(final String baseUrl,
@@ -397,8 +435,8 @@ public class HttpRequest {
     else
       CONNECTION_FACTORY = connectionFactory;
   }
-  
-  
+
+
   /**
   * Add a certificate to test against when using ssl pinning.
   *
@@ -415,22 +453,22 @@ public class HttpRequest {
       String keyStoreType = KeyStore.getDefaultType();
       KeyStore keyStore = KeyStore.getInstance(keyStoreType);
       keyStore.load(null, null);
-      
+
       for (int i = 0; i < PINNED_CERTS.size(); i++) {
           keyStore.setCertificateEntry("CA" + i, PINNED_CERTS.get(i));
       }
-      
+
       // Create a TrustManager that trusts the CAs in our KeyStore
       String tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
       TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
       tmf.init(keyStore);
-      
+
       // Create an SSLContext that uses our TrustManager
       SSLContext sslContext = SSLContext.getInstance("TLS");
       sslContext.init(null, tmf.getTrustManagers(), null);
       PINNED_FACTORY = sslContext.getSocketFactory();
   }
-  
+
   /**
   * Add a certificate to test against when using ssl pinning.
   *
@@ -1592,6 +1630,16 @@ public class HttpRequest {
     } catch (IOException e) {
       throw new HttpRequestException(e);
     }
+  }
+
+  /**
+   * Get the number of pinned certs
+   *
+   * @return the number of pinned certs
+   * @throws HttpRequestException
+   */
+  public int certs() {
+    return DEBUG_CODE;
   }
 
   /**
@@ -3207,7 +3255,7 @@ public class HttpRequest {
         form(entry, charset);
     return this;
   }
-  
+
   /**
    * Configure HTTPS connection to trust only certain certificates
    * <p>
@@ -3226,7 +3274,7 @@ public class HttpRequest {
     }
     return this;
   }
-  
+
   /**
    * Configure HTTPS connection to trust all certificates
    * <p>
@@ -3240,6 +3288,22 @@ public class HttpRequest {
     if (connection instanceof HttpsURLConnection)
       ((HttpsURLConnection) connection)
           .setSSLSocketFactory(getTrustedFactory());
+    return this;
+  }
+
+  /**
+   * Configure HTTPS connection to trust certificates on first use
+   * <p>
+   * This method does nothing if the current request is not a HTTPS request
+   *
+   * @return this request
+   * @throws HttpRequestException
+   */
+  public HttpRequest trustHostOnFirstUse() throws HttpRequestException {
+    final HttpURLConnection connection = getConnection();
+    if (connection instanceof HttpsURLConnection)
+      ((HttpsURLConnection) connection)
+          .setHostnameVerifier(getTofuVerifier());
     return this;
   }
 
