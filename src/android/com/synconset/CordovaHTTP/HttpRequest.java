@@ -340,10 +340,11 @@ public class HttpRequest {
   }
 
   private static HostnameVerifier getTofuVerifier() {
-    if (TOFU_VERIFIER == null)
+    if (TOFU_VERIFIER == null) {
+      debug("Creating TOFU_VERIFIER");
       TOFU_VERIFIER = new HostnameVerifier() {
-
         public boolean verify(String hostname, SSLSession session) {
+          debug("verifying " + hostname);
           try {
             Certificate[] peerCertificates = session.getPeerCertificates();
             Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
@@ -365,7 +366,8 @@ public class HttpRequest {
           }
         }
       };
-
+    }
+    debug("returning TOFU_VERIFIER");
     return TOFU_VERIFIER;
   }
 
@@ -3303,6 +3305,7 @@ public class HttpRequest {
    * @throws HttpRequestException
    */
   public HttpRequest trustHostOnFirstUse() throws HttpRequestException {
+    HttpRequest.debug("setting trustHostOnFirstUse");
     final HttpURLConnection connection = getConnection();
     if (connection instanceof HttpsURLConnection)
       ((HttpsURLConnection) connection)

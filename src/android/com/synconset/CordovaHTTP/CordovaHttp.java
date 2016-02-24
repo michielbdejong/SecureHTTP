@@ -94,7 +94,6 @@ public abstract class CordovaHttp {
             case ALL:
                 request.trustAllCerts();
                 request.trustAllHosts();
-                // request.trustHostOnFirstUse();
                 HttpRequest.debug("mode is ALL");
                 break;
             case NORMAL:
