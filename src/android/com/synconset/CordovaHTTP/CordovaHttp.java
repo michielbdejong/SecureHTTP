@@ -49,14 +49,17 @@ public abstract class CordovaHttp {
     }
 
     public static void enableSSLPinning(boolean enable) {
+        HttpRequest.debug("setting enableSSLPinning " + (enable ? "Mode.PINNING" : "Mode.NORMAL"));
         mode = (enable ? Mode.PINNING : Mode.NORMAL);
     }
 
     public static void acceptAllCerts(boolean accept) {
+        HttpRequest.debug("setting acceptAllCerts " + (accept ? "Mode.ALL" : "Mode.NORMAL"));
         mode = (accept ? Mode.ALL : Mode.NORMAL);
     }
 
     public static void acceptOnFirstUse(boolean accept) {
+        HttpRequest.debug("setting acceptOnFirstUse " + (accept ? "Mode.TOFU" : "Mode.NORMAL"));
         mode = (accept ? Mode.TOFU : Mode.NORMAL);
     }
 
@@ -77,21 +80,27 @@ public abstract class CordovaHttp {
     }
 
     protected HttpRequest setupSecurity(HttpRequest request) {
+        HttpRequest.debug("setting up security");
         switch(mode) {
-        case ALL:
-            request.trustAllCerts();
-            request.trustAllHosts();
-            break;
-        case TOFU:
-            request.trustAllCerts();
-            request.trustHostOnFirstUse();
-            break;
-        case PINNING:
-            request.pinToCerts();
-            break;
-        case NORMAL:
-        default:
-            // ...
+            case TOFU:
+                request.trustAllCerts();
+                request.trustHostOnFirstUse();
+                HttpRequest.debug("mode is TOFU");
+                break;
+            case PINNING:
+                request.pinToCerts();
+                HttpRequest.debug("mode is PINNING");
+                break;
+            case ALL:
+                request.trustAllCerts();
+                request.trustAllHosts();
+                // request.trustHostOnFirstUse();
+                HttpRequest.debug("mode is ALL");
+                break;
+            case NORMAL:
+            default:
+                HttpRequest.debug("mode is NORMAL");
+                // ...
         };
         return request;
     }

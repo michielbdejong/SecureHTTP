@@ -267,7 +267,7 @@ public class HttpRequest {
 
   private static HostnameVerifier TRUSTED_VERIFIER;
 
-  private static int DEBUG_CODE;
+  private static String DEBUG_MSG = "starting up\n";
 
   private static HostnameVerifier TOFU_VERIFIER;
 
@@ -309,7 +309,6 @@ public class HttpRequest {
         }
       } };
       try {
-        DEBUG_CODE = 42;
         SSLContext context = SSLContext.getInstance("TLS");
         context.init(null, trustAllCerts, new SecureRandom());
         TRUSTED_FACTORY = context.getSocketFactory();
@@ -336,6 +335,10 @@ public class HttpRequest {
     return TRUSTED_VERIFIER;
   }
 
+  public static void debug(String msg) {
+    DEBUG_MSG += msg + '\n';
+  }
+
   private static HostnameVerifier getTofuVerifier() {
     if (TOFU_VERIFIER == null)
       TOFU_VERIFIER = new HostnameVerifier() {
@@ -346,18 +349,18 @@ public class HttpRequest {
             Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
             if (TOFU_CERTS.containsKey(hostname)) {
               if (peerRoot.equals(TOFU_CERTS.get(hostname))) {
-                DEBUG_CODE = 1001;
+                debug("same root cert as before found for " + hostname);
               } else {
-                DEBUG_CODE = 1002;
+                debug("different root cert than before found for " + hostname);
               }
               return peerRoot.equals(TOFU_CERTS.get(hostname));
             }
             //trust on first use:
             TOFU_CERTS.put(hostname, peerRoot);
-            DEBUG_CODE = 1003;
+            debug("saved root cert for " + hostname);
             return true;
           } catch(Exception e) {
-            DEBUG_CODE = 1004;
+            debug("error " + e.toString());
             return false;
           }
         }
@@ -1633,13 +1636,13 @@ public class HttpRequest {
   }
 
   /**
-   * Get the number of pinned certs
+   * Get some debug info about tofu mechanism
    *
-   * @return the number of pinned certs
+   * @return a string with debug messages
    * @throws HttpRequestException
    */
-  public int certs() {
-    return DEBUG_CODE;
+  public String tofuReport() {
+    return DEBUG_MSG;
   }
 
   /**

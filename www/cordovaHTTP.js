@@ -20,7 +20,7 @@ var http = {
         return exec(success, failure, "CordovaHttpPlugin", "acceptAllCerts", [allow]);
     },
     acceptOnFirstUse: function(allow, success, failure) {
-        return exec(success, failure, "CordovaHttpPlugin", "acceptAllCerts", [allow]);
+        return exec(success, failure, "CordovaHttpPlugin", "acceptOnFirstUse", [allow]);
     },
     post: function(url, params, headers, success, failure) {
         return exec(success, failure, "CordovaHttpPlugin", "post", [url, params, headers]);
