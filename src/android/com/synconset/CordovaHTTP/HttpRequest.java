@@ -65,6 +65,7 @@ import java.nio.charset.CharsetEncoder;
 import java.security.AccessController;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.MessageDigest;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.security.cert.Certificate;
@@ -258,14 +259,18 @@ public class HttpRequest {
   private static final String CRLF = "\r\n";
 
   private static final String[] EMPTY_STRINGS = new String[0];
-  
+
   private static SSLSocketFactory PINNED_FACTORY;
 
   private static SSLSocketFactory TRUSTED_FACTORY;
-  
+
   private static ArrayList<Certificate> PINNED_CERTS;
 
   private static HostnameVerifier TRUSTED_VERIFIER;
+
+  private static String DEBUG_MSG = "starting up\n";
+
+  private static HostnameVerifier HSS_VERIFIER;
 
   private static String getValidCharset(final String charset) {
     if (charset != null && charset.length() > 0)
@@ -273,7 +278,7 @@ public class HttpRequest {
     else
       return CHARSET_UTF8;
   }
-  
+
   private static SSLSocketFactory getPinnedFactory()
       throws HttpRequestException {
     if (PINNED_FACTORY != null) {
@@ -326,6 +331,46 @@ public class HttpRequest {
       };
 
     return TRUSTED_VERIFIER;
+  }
+
+  public static void debug(String msg) {
+    DEBUG_MSG += msg + '\n';
+  }
+
+  private static HostnameVerifier getHssVerifier() {
+      if (HSS_VERIFIER == null) {
+          debug("Creating HSS_VERIFIER");
+          HSS_VERIFIER = new HostnameVerifier() {
+              public boolean verify(String hostname, SSLSession session) {
+                debug("verifying " + hostname);
+                // return true;
+                try {
+                  Certificate[] peerCertificates = session.getPeerCertificates();
+                  Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
+                  MessageDigest md = MessageDigest.getInstance("SHA256");
+                  md.update(peerRoot.getEncoded());
+                  String peerRootSha = Base64.encodeBytes(md.digest())
+                          .replace('+', '-')
+                          .replace('/', '_')
+                          .substring(0, 43);
+                  debug("peerRoot sha256 " + peerRootSha);
+                  String[] parts = hostname.split(".michielbdejong.com");
+                  if (parts.length == 1) {
+                      debug("comparing " + peerRootSha + " to " + parts[0]);
+                      return peerRootSha.equals(parts[0]);
+                  }
+                  debug("could not extract hash from " + hostname + " " + parts.length);
+                  return false;
+                } catch(Exception e) {
+                  debug("error " + e.toString());
+                  return false;
+                }
+            }
+        };
+    }
+
+    debug("returning HSS_VERIFIER");
+    return HSS_VERIFIER;
   }
 
   private static StringBuilder addPathSeparator(final String baseUrl,
@@ -397,8 +442,8 @@ public class HttpRequest {
     else
       CONNECTION_FACTORY = connectionFactory;
   }
-  
-  
+
+
   /**
   * Add a certificate to test against when using ssl pinning.
   *
@@ -415,22 +460,22 @@ public class HttpRequest {
       String keyStoreType = KeyStore.getDefaultType();
       KeyStore keyStore = KeyStore.getInstance(keyStoreType);
       keyStore.load(null, null);
-      
+
       for (int i = 0; i < PINNED_CERTS.size(); i++) {
           keyStore.setCertificateEntry("CA" + i, PINNED_CERTS.get(i));
       }
-      
+
       // Create a TrustManager that trusts the CAs in our KeyStore
       String tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
       TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
       tmf.init(keyStore);
-      
+
       // Create an SSLContext that uses our TrustManager
       SSLContext sslContext = SSLContext.getInstance("TLS");
       sslContext.init(null, tmf.getTrustManagers(), null);
       PINNED_FACTORY = sslContext.getSocketFactory();
   }
-  
+
   /**
   * Add a certificate to test against when using ssl pinning.
   *
@@ -1592,6 +1637,16 @@ public class HttpRequest {
     } catch (IOException e) {
       throw new HttpRequestException(e);
     }
+  }
+
+  /**
+   * Get some debug info about hss mechanism
+   *
+   * @return a string with debug messages
+   * @throws HttpRequestException
+   */
+  public String hssReport() {
+    return DEBUG_MSG;
   }
 
   /**
@@ -3207,7 +3262,7 @@ public class HttpRequest {
         form(entry, charset);
     return this;
   }
-  
+
   /**
    * Configure HTTPS connection to trust only certain certificates
    * <p>
@@ -3226,7 +3281,7 @@ public class HttpRequest {
     }
     return this;
   }
-  
+
   /**
    * Configure HTTPS connection to trust all certificates
    * <p>
@@ -3240,6 +3295,23 @@ public class HttpRequest {
     if (connection instanceof HttpsURLConnection)
       ((HttpsURLConnection) connection)
           .setSSLSocketFactory(getTrustedFactory());
+    return this;
+  }
+
+  /**
+   * Configure HTTPS connection to trust certificates on first use
+   * <p>
+   * This method does nothing if the current request is not a HTTPS request
+   *
+   * @return this request
+   * @throws HttpRequestException
+   */
+  public HttpRequest trustHostThroughHss() throws HttpRequestException {
+    HttpRequest.debug("setting trustHostThroughHss");
+    final HttpURLConnection connection = getConnection();
+    if (connection instanceof HttpsURLConnection)
+      ((HttpsURLConnection) connection)
+          .setHostnameVerifier(getHssVerifier());
     return this;
   }
 
