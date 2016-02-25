@@ -24,23 +24,30 @@ import android.util.Log;
 
 import com.github.kevinsawicki.http.HttpRequest;
 import com.github.kevinsawicki.http.HttpRequest.HttpRequestException;
- 
+
 public class CordovaHttpGet extends CordovaHttp implements Runnable {
     public CordovaHttpGet(String urlString, Map<?, ?> params, Map<String, String> headers, CallbackContext callbackContext) {
         super(urlString, params, headers, callbackContext);
     }
-    
+
     @Override
     public void run() {
         try {
             HttpRequest request = HttpRequest.get(this.getUrlString(), this.getParams(), true);
-            this.setupSecurity(request);
+            request.debug("url " + this.getUrlString());
+            Map<?,?> params = this.getParams(); // TODO: these are really the query params
+            String fingerprint = params.get("fingerprint").toString();
+            request.debug("fingerprint " + fingerprint);
+            request.debug("setting up security for GET request");
+            this.setupSecurity(request, fingerprint);
             request.acceptCharset(CHARSET);
             request.headers(this.getHeaders());
             int code = request.code();
+            String hssReport = request.hssReport();
             String body = request.body(CHARSET);
             JSONObject response = new JSONObject();
             response.put("status", code);
+            response.put("hssReport", hssReport);
             if (code >= 200 && code < 300) {
                 response.put("data", body);
                 this.getCallbackContext().success(response);
@@ -56,7 +63,7 @@ public class CordovaHttpGet extends CordovaHttp implements Runnable {
             } else if (e.getCause() instanceof SSLHandshakeException) {
                 this.respondWithError("SSL handshake failed");
             } else {
-                this.respondWithError("There was an error with the request");
+                this.respondWithError("There was an error with the request" + e.toString());
             }
         }
     }
