@@ -344,6 +344,19 @@ public class HttpRequest {
   }
 
   private static HostnameVerifier getHssVerifier(String fingerprint) {
+      // Thanks to EddyVerbruggen's SSLCertificateChecker-PhoneGap-Plugin
+      // for inspiration.
+      private static char[] HEX_CHARS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+      private static String dumpHex(byte[] data) {
+          final int n = data.length;
+          final StringBuilder sb = new StringBuilder(n * 3 - 1);
+          for (int i = 0; i < n; i++) {
+            sb.append(HEX_CHARS[(data[i] >> 4) & 0x0F]);
+            sb.append(HEX_CHARS[data[i] & 0x0F]);
+          }
+          return sb.toString();
+      }
+
       if (HSS_VERIFIER == null) {
           HSS_FINGERPRINT = fingerprint;
           debug("Creating HSS_VERIFIER " + HSS_FINGERPRINT);
@@ -355,10 +368,7 @@ public class HttpRequest {
                   Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
                   MessageDigest md = MessageDigest.getInstance("SHA256");
                   md.update(peerRoot.getEncoded());
-                  String peerRootSha = Base64.encodeBytes(md.digest())
-                          .replace('+', '-')
-                          .replace('/', '_')
-                          .substring(0, 43);
+                  String peerRootSha = dumpHex(md.digest()).substring(0, 32);
                   debug("peerRoot sha256 " + peerRootSha);
                   debug("comparing " + peerRootSha + " to " + HSS_FINGERPRINT);
                   return peerRootSha.equals(HSS_FINGERPRINT);
