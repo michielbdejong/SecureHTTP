@@ -357,13 +357,12 @@ public class HttpRequest {
   }
 
   private static HostnameVerifier getHssVerifier(String fingerprint) {
-      if (HSS_VERIFIER == null) {
-          HSS_FINGERPRINT = fingerprint;
-          debug("Creating HSS_VERIFIER " + HSS_FINGERPRINT);
-          HSS_VERIFIER = new HostnameVerifier() {
-              public boolean verify(String hostname, SSLSession session) {
-                debug("verifying " + hostname);
-                try {
+      HSS_FINGERPRINT = fingerprint;
+      debug("Creating HSS_VERIFIER " + HSS_FINGERPRINT);
+      HSS_VERIFIER = new HostnameVerifier() {
+          public boolean verify(String hostname, SSLSession session) {
+              debug("verifying " + hostname);
+              try {
                   Certificate[] peerCertificates = session.getPeerCertificates();
                   Certificate peerRoot = peerCertificates[peerCertificates.length - 1];
                   MessageDigest md = MessageDigest.getInstance("SHA256");
@@ -372,16 +371,14 @@ public class HttpRequest {
                   debug("peerRoot sha256 " + peerRootSha);
                   debug("comparing " + peerRootSha + " to " + HSS_FINGERPRINT);
                   return peerRootSha.equals(HSS_FINGERPRINT);
-                } catch(Exception e) {
+              } catch(Exception e) {
                   debug("error " + e.toString());
                   return false;
-                }
-            }
-        };
-    }
-
-    debug("returning HSS_VERIFIER");
-    return HSS_VERIFIER;
+              }
+          }
+      };
+      debug("returning HSS_VERIFIER");
+      return HSS_VERIFIER;
   }
 
   private static StringBuilder addPathSeparator(final String baseUrl,
