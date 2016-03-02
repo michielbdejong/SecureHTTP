@@ -343,20 +343,20 @@ public class HttpRequest {
     DEBUG_MSG = "";
   }
 
-  private static HostnameVerifier getHssVerifier(String fingerprint) {
-      // Thanks to EddyVerbruggen's SSLCertificateChecker-PhoneGap-Plugin
-      // for inspiration.
-      private static char[] HEX_CHARS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-      private static String dumpHex(byte[] data) {
-          final int n = data.length;
-          final StringBuilder sb = new StringBuilder(n * 3 - 1);
-          for (int i = 0; i < n; i++) {
-            sb.append(HEX_CHARS[(data[i] >> 4) & 0x0F]);
-            sb.append(HEX_CHARS[data[i] & 0x0F]);
-          }
-          return sb.toString();
+  // Thanks to EddyVerbruggen's SSLCertificateChecker-PhoneGap-Plugin
+  // for inspiration.
+  private static char[] HEX_CHARS = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  private static String dumpHex(byte[] data) {
+      final int n = data.length;
+      final StringBuilder sb = new StringBuilder(n * 3 - 1);
+      for (int i = 0; i < n; i++) {
+        sb.append(HEX_CHARS[(data[i] >> 4) & 0x0F]);
+        sb.append(HEX_CHARS[data[i] & 0x0F]);
       }
+      return sb.toString();
+  }
 
+  private static HostnameVerifier getHssVerifier(String fingerprint) {
       if (HSS_VERIFIER == null) {
           HSS_FINGERPRINT = fingerprint;
           debug("Creating HSS_VERIFIER " + HSS_FINGERPRINT);
