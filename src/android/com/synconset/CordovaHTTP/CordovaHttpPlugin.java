@@ -88,6 +88,14 @@ public class CordovaHttpPlugin extends CordovaPlugin {
             boolean accept = args.getBoolean(0);
             CordovaHttp.acceptHss(accept);
             callbackContext.success();
+        } else if (action.equals("setProxyHost")) {
+            String host = args.getString(0);
+            CordovaHttp.proxyHost(host);
+            callbackContext.success();
+        } else if (action.equals("setProxyPort")) {
+            int port = args.getInt(0);
+            CordovaHttp.proxyPort(port);
+            callbackContext.success();
         } else if (action.equals("setHeader")) {
             String header = args.getString(0);
             String value = args.getString(1);

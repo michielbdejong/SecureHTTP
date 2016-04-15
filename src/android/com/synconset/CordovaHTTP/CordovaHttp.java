@@ -58,6 +58,14 @@ public abstract class CordovaHttp {
         mode = (accept ? Mode.ALL : Mode.NORMAL);
     }
 
+    public static void proxyHost(String host) {
+        HttpRequest.proxyHost(host);
+    }
+
+    public static void proxyPort(int port) {
+        HttpRequest.proxyPort(port);
+    }
+
     public static void acceptHss(boolean accept) {
         HttpRequest.debugClear();
         HttpRequest.debug("setting acceptHss " + (accept ? "Mode.HSS" : "Mode.NORMAL"));

@@ -22,6 +22,12 @@ var http = {
     acceptHss: function(allow, success, failure) {
         return exec(success, failure, "CordovaHttpPlugin", "acceptHss", [allow]);
     },
+    proxyHost: function(host, success, failure) {
+        return exec(success, failure, "CordovaHttpPlugin", "proxyHost", [host]);
+    },
+    proxyPort: function(port, success, failure) {
+        return exec(success, failure, "CordovaHttpPlugin", "proxyPort", [port]);
+    },
     post: function(url, params, headers, success, failure) {
         return exec(success, failure, "CordovaHttpPlugin", "post", [url, params, headers]);
     },
